@@ -1,12 +1,12 @@
 FROM rustlang/rust:nightly-slim
 
-WORKDIR /usr/src/myapp
+WORKDIR /usr/src/opsa
 
-# Copy all files
-COPY excretor/Cargo.toml .
-COPY excretor/ .
-# Copy migrations directory
+# Preserve the repository layout so compile-time paths match local builds.
+COPY excretor ./excretor
 COPY migrations ./migrations
+
+WORKDIR /usr/src/opsa/excretor
 
 # Build the binary with SQLX offline mode
 ENV SQLX_OFFLINE=true
