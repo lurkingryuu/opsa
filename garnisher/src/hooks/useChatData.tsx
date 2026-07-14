@@ -5,6 +5,13 @@ import { API_ENDPOINTS } from '../api';
 const getErrorMessage = (error: unknown): string =>
     error instanceof Error ? error.message : String(error);
 
+class AuthenticationRequiredError extends Error {
+    constructor() {
+        super('Authentication required.');
+        this.name = 'AuthenticationRequiredError';
+    }
+}
+
 const formatDateToNaiveISO = (date: Date): string => {
     const pad = (num: number) => num.toString().padStart(2, '0');
     const padMs = (num: number) => num.toString().padStart(3, '0');
@@ -15,7 +22,7 @@ const formatDateToNaiveISO = (date: Date): string => {
 };
 
 export const useChatData = (appTitle: string) => {
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
     const [view, setView] = useState<ViewState>('channels');
     const [channels, setChannels] = useState<Channel[]>([]);
     const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -31,12 +38,27 @@ export const useChatData = (appTitle: string) => {
     const messageListRef = useRef<HTMLDivElement>(null);
     const previousScrollHeightRef = useRef<number | null>(null);
 
+    const authenticatedFetch = useCallback(async (
+        input: RequestInfo | URL,
+        init?: RequestInit,
+    ): Promise<Response> => {
+        const response = await fetch(input, init);
+
+        if (response.status === 401) {
+            setIsLoggedIn(false);
+            throw new AuthenticationRequiredError();
+        }
+
+        setIsLoggedIn(true);
+        return response;
+    }, []);
+
     // Initial fetch of channels and users on component mount
     useEffect(() => {
         const fetchChannels = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(API_ENDPOINTS.channels);
+                const response = await authenticatedFetch(API_ENDPOINTS.channels);
                 if (!response.ok) throw new Error('Failed to fetch channels.');
                 const data = await response.json();
                 if (data.channels) {
@@ -46,6 +68,8 @@ export const useChatData = (appTitle: string) => {
                     }
                 }
             } catch (err) {
+                if (err instanceof AuthenticationRequiredError) return;
+                setIsLoggedIn(true);
                 setError(getErrorMessage(err));
                 setView('error');
             } finally {
@@ -55,13 +79,14 @@ export const useChatData = (appTitle: string) => {
 
         const fetchUsers = async () => {
             try {
-                const response = await fetch(API_ENDPOINTS.users);
+                const response = await authenticatedFetch(API_ENDPOINTS.users);
                 if (!response.ok) throw new Error('Failed to fetch users.');
                 const data = await response.json();
                 if (data.users) {
                     setUsers(data.users);
                 }
             } catch (err) {
+                if (err instanceof AuthenticationRequiredError) return;
                 console.error("Failed to fetch users:", getErrorMessage(err));
                 // Optionally set an error state specific to users or a general one
             }
@@ -69,22 +94,18 @@ export const useChatData = (appTitle: string) => {
 
         fetchChannels();
         fetchUsers();
-    }, []);
+    }, [authenticatedFetch]);
 
     // Fetch messages for the selected channel whenever it changes
     const selectedChannelId = selectedChannel?.id;
 
     useEffect(() => {
         if (!selectedChannelId) return;
-        setMessages([]);
-        setOldestMessageTimestamp(null);
-        setAllMessagesLoaded(false);
-        previousScrollHeightRef.current = null;
 
         const fetchChannelAndMessages = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(API_ENDPOINTS.channelAndMessages(selectedChannelId));
+                const response = await authenticatedFetch(API_ENDPOINTS.channelAndMessages(selectedChannelId));
                 if (!response.ok) throw new Error('Failed to fetch channel data and messages.');
                 const data = await response.json();
                 if (data.channel && data.messages) {
@@ -97,6 +118,7 @@ export const useChatData = (appTitle: string) => {
                     }
                 }
             } catch (err) {
+                if (err instanceof AuthenticationRequiredError) return;
                 setError(getErrorMessage(err));
                 setView('error');
             } finally {
@@ -105,7 +127,7 @@ export const useChatData = (appTitle: string) => {
         };
 
         fetchChannelAndMessages();
-    }, [selectedChannelId]);
+    }, [authenticatedFetch, selectedChannelId]);
 
     /**
      * FIX: This effect now correctly handles scrolling.
@@ -143,7 +165,7 @@ export const useChatData = (appTitle: string) => {
             if (messageListRef.current) {
                 previousScrollHeightRef.current = messageListRef.current.scrollHeight;
             }
-            const response = await fetch(API_ENDPOINTS.messages(channelId, timestamp));
+            const response = await authenticatedFetch(API_ENDPOINTS.messages(channelId, timestamp));
             if (!response.ok) throw new Error(`Failed to fetch messages. Status: ${response.status}`);
             const data = await response.json();
             if (data.messages) {
@@ -158,6 +180,7 @@ export const useChatData = (appTitle: string) => {
                 throw new Error('API response for messages is not in the expected format.');
             }
         } catch (err) {
+            if (err instanceof AuthenticationRequiredError) return;
             setError(getErrorMessage(err));
             setView('error');
         } finally {
@@ -166,7 +189,7 @@ export const useChatData = (appTitle: string) => {
     };
 
     // Event handlers and utility functions
-    const handleLogin = () => setIsLoggedIn(true);
+    const handleLogin = () => window.location.assign('/auth');
 
     /**
      * Handles the search functionality by sending a request to the API.
@@ -214,7 +237,7 @@ export const useChatData = (appTitle: string) => {
                 formData.append('after', formatDateToNaiveISO(after));
             }
 
-            const response = await fetch(API_ENDPOINTS.search, {
+            const response = await authenticatedFetch(API_ENDPOINTS.search, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData,
@@ -225,15 +248,20 @@ export const useChatData = (appTitle: string) => {
             setSearchResults(data.messages || []);
 
         } catch (err) {
+            if (err instanceof AuthenticationRequiredError) return;
             setError(getErrorMessage(err));
             setView('error');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [authenticatedFetch]);
 
     const handleChannelClick = (channel: Channel) => {
         setView('channels');
+        setMessages([]);
+        setOldestMessageTimestamp(null);
+        setAllMessagesLoaded(false);
+        previousScrollHeightRef.current = null;
         setSelectedChannel(channel);
         setSelectedThread(null);
         setSearchResults([]);
@@ -242,11 +270,12 @@ export const useChatData = (appTitle: string) => {
     const handleRepliesClick = async (message: MessageType) => {
         setIsLoading(true);
         try {
-            const response = await fetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, message.channel_id));
+            const response = await authenticatedFetch(API_ENDPOINTS.replies(message.timestamp, message.user_id, message.channel_id));
             if (!response.ok) throw new Error('Failed to fetch replies.');
             const data = await response.json();
             setSelectedThread({ parentMessage: message, replies: data.messages });
         } catch (err) {
+            if (err instanceof AuthenticationRequiredError) return;
             setError(getErrorMessage(err));
             setView('error');
         } finally {

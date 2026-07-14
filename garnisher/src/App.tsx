@@ -110,13 +110,18 @@ const MainContent: React.FC<MainContentProps> = ({
 
 const App: React.FC = () => {
     // All state logic remains in the custom hook.
-    const chatData = useChatData('Realm of Immortals');
+    const chatData = useChatData('OPSA');
+
+    if (chatData.isLoggedIn === null) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white">
+                <Loader2 className="h-12 w-12 animate-spin text-indigo-400" aria-label="Loading session" />
+            </div>
+        );
+    }
 
     return (
         <>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <script src="https://unpkg.com/lucide-react@latest"></script>
-
             {chatData.isLoggedIn ? (
                 <div className="flex h-screen bg-gray-900 text-white font-sans">
                     <ChannelsSidebar

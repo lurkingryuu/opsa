@@ -67,9 +67,8 @@ async fn verify_token_middleware(
             }
         } else {
             return Ok(Response::builder()
-                .status(StatusCode::TEMPORARY_REDIRECT)
-                .header("Location", "/login")
-                .body(Body::empty())
+                .status(StatusCode::UNAUTHORIZED)
+                .body(Body::from(FORBIDDEN_MSG))
                 .unwrap());
         }
     }
@@ -105,5 +104,6 @@ pub fn get_excretor_router(tummy: Tummy, env_vars: EnvVars) -> Router {
         .route("/auth", get(handlers::auth))
         .route("/auth/callback", get(handlers::auth_callback))
         .route("/assets/*file", get(handlers::assets))
+        .route("/health", get(handlers::health))
         .with_state(state)
 }

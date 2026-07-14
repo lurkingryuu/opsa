@@ -56,6 +56,13 @@ impl Tummy {
         Self { tummy_conn_pool }
     }
 
+    pub async fn ping(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("SELECT 1")
+            .execute(&self.tummy_conn_pool)
+            .await
+            .map(|_| ())
+    }
+
     pub async fn get_all_channels(&self) -> color_eyre::Result<Vec<Channel>> {
         let db_channels = query_as!(DBChannel, "SELECT * FROM channels ORDER BY name ASC")
             .fetch_all(&self.tummy_conn_pool)
