@@ -262,8 +262,9 @@ and dependency-auditable.
   (CI validation of all three Dockerfiles).
 - **Single arch** `linux/amd64` (the node is amd64; skipping QEMU keeps the
   Rust build fast).
-- Coexists with `release.yaml`: both fire on `v*` tags independently
-  (release.yaml cuts the GitHub release/changelog; this workflow pushes images).
+- Coexists with `release.yaml`: both fire on `v*` tags independently. The
+  release workflow creates GitHub-generated release notes with the automatic
+  `GITHUB_TOKEN`; this workflow pushes images.
 
 ```yaml
 name: Build & Push Images
@@ -817,8 +818,8 @@ pinned tag (convention). Optional nicety - group all three images into one PR:
 1. **opsa PR** with all of Part A -> merge to `main`.
 2. **Tag `v1.1.0`** -> `build-images.yaml` pushes
    `ghcr.io/lurkingryuu/opsa-{excretor,garnisher,digester}:1.1.0`; mark the three
-   GHCR packages **public**; `release.yaml` independently cuts the GitHub
-   release.
+   GHCR packages **public**; `release.yaml` independently creates the GitHub
+   release using generated notes.
 3. **Rotate production secrets**: issue a new Slack client secret and signing
    secret for the new deployment rather than copying credentials from the old
    dotenvx setup. The DB password is CNPG-generated, so nothing to rotate there.
