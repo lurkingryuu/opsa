@@ -15,6 +15,16 @@ import {
 // Adjust the path if necessary.
 import type { Channel, Message as MessageType, SearchResult, ViewState } from './types';
 
+// Define the type for the search parameters object
+type SearchParams = {
+    query: string;
+    channelId: string | null;
+    userId: string | null;
+    before: Date | null;
+    after: Date | null;
+};
+
+
 // --- Props for MainContent ---
 // We define the props that MainContent will need to receive.
 interface MainContentProps {
@@ -24,13 +34,7 @@ interface MainContentProps {
     searchResults: SearchResult[];
     selectedChannel: Channel | null;
     error: string | null;
-    handleSearch: (params: {
-        query: string;
-        channelId: string | null;
-        userId: string | null;
-        before: Date | null;
-        after: Date | null;
-    }) => void;
+    handleSearch: (params: SearchParams) => void;
     closeSearchResults: () => void;
     handleRepliesClick: (message: MessageType) => void;
     allMessagesLoaded: boolean;
