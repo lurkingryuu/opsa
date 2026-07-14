@@ -9,14 +9,12 @@ CREATE TABLE IF NOT EXISTS users (
     image_url TEXT
 );
 
-
 CREATE TABLE IF NOT EXISTS channels (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     topic TEXT,
     purpose TEXT
 );
-
 
 CREATE TABLE IF NOT EXISTS messages (
     channel_id TEXT NOT NULL,
@@ -29,4 +27,3 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (channel_id) REFERENCES channels(id)
 );
-

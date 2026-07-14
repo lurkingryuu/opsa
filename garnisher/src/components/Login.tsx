@@ -9,7 +9,7 @@ export const Login: React.FC<LoginProps> = ({ handleLogin, appTitle }) => (
     <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
         <div className="text-center p-10 bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full border border-gray-700">
             <h1 className="text-3xl font-bold mb-6">{appTitle}</h1>
-            <p className="text-gray-400 mb-8">A simple messaging app.</p>
+            <p className="text-gray-400 mb-8">Our Precious Slack Archive.</p>
             <button
                 onClick={handleLogin}
                 className="flex items-center justify-center w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 rounded-full text-white font-semibold shadow-md"

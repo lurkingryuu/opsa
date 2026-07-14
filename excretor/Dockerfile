@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly-slim
+FROM rustlang/rust:nightly-slim AS builder
 
 WORKDIR /usr/src/opsa
 
@@ -12,4 +12,17 @@ WORKDIR /usr/src/opsa/excretor
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
 
-CMD ["target/release/excretor"]
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /usr/src/opsa/excretor/target/release/excretor /app/excretor
+
+RUN mkdir -p /app/assets
+ENV STATIC_ASSETS_DIR=/app/assets
+
+EXPOSE 3000
+CMD ["/app/excretor"]

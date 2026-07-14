@@ -60,6 +60,17 @@ pub async fn serve_react_app() -> Result<(StatusCode, Response), AppError> {
     Ok((StatusCode::OK, "Hello app!".into_response()))
 }
 
+/// Reports whether excretor can reach its PostgreSQL database.
+pub async fn health(State(state): State<RouterState>) -> StatusCode {
+    match state.tummy.ping().await {
+        Ok(()) => StatusCode::OK,
+        Err(error) => {
+            tracing::warn!(%error, "Database health check failed");
+            StatusCode::SERVICE_UNAVAILABLE
+        }
+    }
+}
+
 pub async fn get_users(
     State(state): State<RouterState>,
 ) -> Result<(StatusCode, Response), AppError> {
